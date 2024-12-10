@@ -5,10 +5,13 @@ import physics
 import world_generator
 import level_files
 import pause_menu
+import tracker
+import random
 
 #  MAIN FILE TO DO LIST:
 #   -Add collision detection for slanted blocks
 #   -Add wall slide/jump mechanic for player
+#   -Make tracking
 
 #  LEVEL EDITOR TO DO LIST:
 # -Add mechanic to set player spawn
@@ -18,7 +21,7 @@ import pause_menu
 # -Add mechanic to rotate currently selected block
 
 # PLAYER TO DO LIST:
-# - Add dash mechanic
+# - Dial in dash mechanic
 
 GAME_SCALE = 2
 PANNING_SCREEN_WIDTH = 960
@@ -49,16 +52,16 @@ def load_backgrounds():
 
 def display_background(player):
     for index, image in enumerate(player.background_list[::-1], 1):
-        if player.x_position <= PANNING_SCREEN_WIDTH // 2:
+        if player.position[0] <= PANNING_SCREEN_WIDTH // 2:
             x_start = 0
 
-        elif player.x_position >= SCREEN_WIDTH - PANNING_SCREEN_WIDTH // 2:
+        elif player.position[0] >= SCREEN_WIDTH - PANNING_SCREEN_WIDTH // 2:
             x_start = SCREEN_WIDTH - PANNING_SCREEN_WIDTH
 
         else:
-            x_start = player.x_position - PANNING_SCREEN_WIDTH // 2 +  player.x_velocity
-        display_rect = pygame.Rect(x_start * index * .1, player.y_position + 400 - PANNING_SCREEN_HEIGHT // 4, PANNING_SCREEN_WIDTH, PANNING_SCREEN_HEIGHT // 2)
-        player.play_surface.blit(image, (x_start, player.y_position - PANNING_SCREEN_HEIGHT // 4), area=display_rect)
+            x_start = player.position[0] - PANNING_SCREEN_WIDTH // 2 +  player.velocity[0]
+        display_rect = pygame.Rect(x_start * index * .1, player.position[1] + 400 - PANNING_SCREEN_HEIGHT // 4, PANNING_SCREEN_WIDTH, PANNING_SCREEN_HEIGHT // 2)
+        player.play_surface.blit(image, (x_start, player.position[1] - PANNING_SCREEN_HEIGHT // 4), area=display_rect)
 
 def display_tile_set(player, tile_foreground=False, tile_background=False):
     x_clamp_index = PANNING_SCREEN_WIDTH // (32 * GAME_SCALE)
@@ -71,12 +74,12 @@ def display_tile_set(player, tile_foreground=False, tile_background=False):
         tile_set = player.tile_foreground
 
     for layer in tile_set[max(player.y_ind-Y_WINDOW_PANNING_INDEX,0):player.y_ind+Y_WINDOW_PANNING_INDEX+1]:
-        if player.x_position + PANNING_SCREEN_WIDTH // 2 >= SCREEN_WIDTH - PANNING_SCREEN_WIDTH // 2:
+        if player.position[0] + PANNING_SCREEN_WIDTH // 2 >= SCREEN_WIDTH - PANNING_SCREEN_WIDTH // 2:
             for tile in layer[x_clamp_index:]:
                 if tile.tile_number != "00":
                     tile.draw_platform(player.play_surface)
 
-        elif player.x_position - PANNING_SCREEN_WIDTH // 2 <= 0 :
+        elif player.position[0] - PANNING_SCREEN_WIDTH // 2 <= 0 :
             for tile in layer[:x_clamp_index]:
                 if tile.tile_number != "00":
                     tile.draw_platform(player.play_surface)
@@ -97,30 +100,32 @@ def event_checker(player_one, player_two, pause_menu):
     return True
 
 def pan_window(player, player_screen):
-    if player.x_position <= PANNING_SCREEN_WIDTH // 2:
+    if player.position[0] <= PANNING_SCREEN_WIDTH // 2:
         x_start = 0
 
-    elif player.x_position + PANNING_SCREEN_WIDTH // 2 > SCREEN_WIDTH:
+    elif player.position[0] + PANNING_SCREEN_WIDTH // 2 > SCREEN_WIDTH:
         x_start = SCREEN_WIDTH - PANNING_SCREEN_WIDTH
     else :
-        x_start = player.x_position - PANNING_SCREEN_WIDTH/2
+        x_start = player.position[0] - PANNING_SCREEN_WIDTH/2
 
-    display_rect = pygame.Rect(x_start, player.y_position - PANNING_SCREEN_HEIGHT // 4, PANNING_SCREEN_WIDTH, PANNING_SCREEN_HEIGHT // 2)
+    display_rect = pygame.Rect(x_start, player.position[1] - PANNING_SCREEN_HEIGHT // 4, PANNING_SCREEN_WIDTH, PANNING_SCREEN_HEIGHT // 2)
     player_screen.blit(player.play_surface, area=display_rect)
 
-def main(game_scale=GAME_SCALE):
+def main():
     running = True
     screen = pygame.display.set_mode((PANNING_SCREEN_WIDTH, PANNING_SCREEN_HEIGHT))
     screen.set_alpha(None)
     clock = pygame.time.Clock()
     font = pygame.font.SysFont("comicsans", 30)
 
+    #trackers = tracker.Tracker(random.randint(0, screen.width), random.randint(0, screen.height))
+
     #======================================= PLAYER INITIALIZATION ================================================
     player_one, player_one_screen = initialize_player(arrow_controls=False)
     player_two, player_two_screen = initialize_player(arrow_controls=True)
     player_two.current_level = 0
     player_two.x_spawn = (len(level_files.player_two_level_set[0][player_two.current_level][0]) - 5) * 32 * GAME_SCALE
-    player_two.x_position = player_two.x_spawn
+    player_two.position[0] = player_two.x_spawn
     player_two.direction = -1
 
     #=======================================PLAYER ONE BACKGROUNDS ================================================
@@ -201,7 +206,7 @@ def main(game_scale=GAME_SCALE):
             player_two_test_objective.check_objective_collision()
             level_objective.check_level_complete(player_one, player_two)
             # ============================= FPS CHECK ============================================
-            clock.tick(60)
+            clock.tick()
             fps_text = font.render(f"FPS: {clock.get_fps():.0f}", True, (255, 255, 255))
             fps_text_rect = fps_text.get_rect()
             screen.blit(fps_text, fps_text_rect)
@@ -210,8 +215,7 @@ def main(game_scale=GAME_SCALE):
         else:
             game_pause_menu.run_pause_menu()
 
-
 if __name__ == '__main__':
     initialize_pygame()
-    main(GAME_SCALE)
+    main()
 
