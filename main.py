@@ -1,12 +1,12 @@
 import pygame
-import level_objective
+import pause_menu, button
+import level_objective, level_files, level_editor
 import player
 import physics
 import world_generator
-import level_files
-import pause_menu
-import tracker
-import random
+
+
+
 
 #  MAIN FILE TO DO LIST:
 #   -Add collision detection for slanted blocks
@@ -24,7 +24,7 @@ import random
 # - Dial in dash mechanic
 
 GAME_SCALE = 2
-PANNING_SCREEN_WIDTH = 960
+PANNING_SCREEN_WIDTH = 1248
 PANNING_SCREEN_HEIGHT = 640
 SCREEN_WIDTH = PANNING_SCREEN_WIDTH * 5
 SCREEN_HEIGHT = PANNING_SCREEN_HEIGHT * 3
@@ -111,6 +111,12 @@ def pan_window(player, player_screen):
     display_rect = pygame.Rect(x_start, player.position[1] - PANNING_SCREEN_HEIGHT // 4, PANNING_SCREEN_WIDTH, PANNING_SCREEN_HEIGHT // 2)
     player_screen.blit(player.play_surface, area=display_rect)
 
+def run_level_editor(level_editor_button):
+    level_editor_button.display_button()
+    level_editor_button.check_pressed(pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1])
+    if level_editor_button.is_pressed:
+        level_editor.main(PANNING_SCREEN_WIDTH, PANNING_SCREEN_HEIGHT)
+
 def main():
     running = True
     screen = pygame.display.set_mode((PANNING_SCREEN_WIDTH, PANNING_SCREEN_HEIGHT))
@@ -144,17 +150,13 @@ def main():
 
     # ============================   PAUSE MENU TESTING =================================
     game_pause_menu = pause_menu.PauseMenu(screen)
+    level_editor_button = button.Button(screen, screen.width//2, 40, text="Level Editor" )
 
 
     while running:
+        # ========================= CHECK FOR GAME INPUT ===============================
         running = event_checker(player_one, player_two, game_pause_menu)
-
         if not game_pause_menu.is_paused:
-
-            # ========================= CHECK FOR GAME INPUT ===============================
-
-
-
             # ============================= PLAYER MOVEMENT ================================
             player_one.get_player_movement()
             player_two.get_player_movement()
@@ -206,16 +208,20 @@ def main():
             player_two_test_objective.check_objective_collision()
             level_objective.check_level_complete(player_one, player_two)
             # ============================= FPS CHECK ============================================
-            clock.tick()
+            clock.tick(60)
             fps_text = font.render(f"FPS: {clock.get_fps():.0f}", True, (255, 255, 255))
             fps_text_rect = fps_text.get_rect()
             screen.blit(fps_text, fps_text_rect)
-            pygame.display.update()
 
         else:
+            screen.fill((255,255,255))
             game_pause_menu.run_pause_menu()
+            run_level_editor(level_editor_button)
+
+        pygame.display.update()
 
 if __name__ == '__main__':
     initialize_pygame()
     main()
+
 
