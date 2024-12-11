@@ -1,12 +1,15 @@
 import pygame
+
+import particle
 import pause_menu, button
 import level_objective, level_files, level_editor
 import player
 import physics
 import world_generator
+import tracker
+import random
 
-
-
+from particle import render_particles
 
 #  MAIN FILE TO DO LIST:
 #   -Add collision detection for slanted blocks
@@ -17,8 +20,7 @@ import world_generator
 # -Add mechanic to set player spawn
 # -Add mechanic to set level objective
 # -Add shift click add mechanic
-# -Add display for currently selected block
-# -Add mechanic to rotate currently selected block
+
 
 # PLAYER TO DO LIST:
 # - Dial in dash mechanic
@@ -103,7 +105,7 @@ def pan_window(player, player_screen):
     if player.position[0] <= PANNING_SCREEN_WIDTH // 2:
         x_start = 0
 
-    elif player.position[0] + PANNING_SCREEN_WIDTH // 2 > SCREEN_WIDTH:
+    elif player.position[0] + PANNING_SCREEN_WIDTH > SCREEN_WIDTH:
         x_start = SCREEN_WIDTH - PANNING_SCREEN_WIDTH
     else :
         x_start = player.position[0] - PANNING_SCREEN_WIDTH/2
@@ -124,13 +126,11 @@ def main():
     clock = pygame.time.Clock()
     font = pygame.font.SysFont("comicsans", 30)
 
-    #trackers = tracker.Tracker(random.randint(0, screen.width), random.randint(0, screen.height))
-
     #======================================= PLAYER INITIALIZATION ================================================
     player_one, player_one_screen = initialize_player(arrow_controls=False)
     player_two, player_two_screen = initialize_player(arrow_controls=True)
     player_two.current_level = 0
-    player_two.x_spawn = (len(level_files.player_two_level_set[0][player_two.current_level][0]) - 5) * 32 * GAME_SCALE
+    player_two.x_spawn, player_two.y_spawn = pygame.math.Vector2(level_files.player_two_spawnpoints[player_two.current_level])  * GAME_SCALE * 32
     player_two.position[0] = player_two.x_spawn
     player_two.direction = -1
 
@@ -152,11 +152,21 @@ def main():
     game_pause_menu = pause_menu.PauseMenu(screen)
     level_editor_button = button.Button(screen, screen.width//2, 40, text="Level Editor" )
 
+    # ============================   PARTICLE EFFECT TESTING ============================
+    trackers = [tracker.Tracker(random.randint(0, 100), random.randint(0, 100)) for i in range(100)]
+    drift_particles = particle.create_particles()
 
     while running:
         # ========================= CHECK FOR GAME INPUT ===============================
         running = event_checker(player_one, player_two, game_pause_menu)
         if not game_pause_menu.is_paused:
+
+            # for _tracker in trackers:
+            #     _tracker.track(player_one.play_surface, player_one)
+
+            render_particles(player_one.play_surface, drift_particles, player_one)
+
+
             # ============================= PLAYER MOVEMENT ================================
             player_one.get_player_movement()
             player_two.get_player_movement()
@@ -207,11 +217,15 @@ def main():
             player_one_test_objective.check_objective_collision()
             player_two_test_objective.check_objective_collision()
             level_objective.check_level_complete(player_one, player_two)
+
+
             # ============================= FPS CHECK ============================================
             clock.tick(60)
             fps_text = font.render(f"FPS: {clock.get_fps():.0f}", True, (255, 255, 255))
             fps_text_rect = fps_text.get_rect()
             screen.blit(fps_text, fps_text_rect)
+
+
 
         else:
             screen.fill((255,255,255))
