@@ -9,12 +9,11 @@ import world_generator
 import tracker
 import random
 
-from particle import render_particles
-
 #  MAIN FILE TO DO LIST:
 #   -Add collision detection for slanted blocks
 #   -Add wall slide/jump mechanic for player
 #   -Make tracking
+#   -Add grass animations
 
 #  LEVEL EDITOR TO DO LIST:
 # -Add mechanic to set player spawn
@@ -26,12 +25,15 @@ from particle import render_particles
 # - Dial in dash mechanic
 
 GAME_SCALE = 2
+TILE_SIZE = 32
 PANNING_SCREEN_WIDTH = 1248
 PANNING_SCREEN_HEIGHT = 640
 SCREEN_WIDTH = PANNING_SCREEN_WIDTH * 5
 SCREEN_HEIGHT = PANNING_SCREEN_HEIGHT * 3
-X_WINDOW_PANNING_INDEX = PANNING_SCREEN_WIDTH // (32 * 2 * GAME_SCALE) + 1
-Y_WINDOW_PANNING_INDEX = PANNING_SCREEN_HEIGHT // (32 * 4 * GAME_SCALE) + 1
+X_WINDOW_PANNING_INDEX = PANNING_SCREEN_WIDTH // (TILE_SIZE * 2 * GAME_SCALE) + 1
+Y_WINDOW_PANNING_INDEX = PANNING_SCREEN_HEIGHT // (TILE_SIZE * 4 * GAME_SCALE) + 1
+PLAYER_OFFSET_Y = 400
+BACKGROUND_SCROLL_FACTOR = 0.1
 
 def initialize_pygame():
     pygame.init()
@@ -54,20 +56,21 @@ def load_backgrounds():
 
 def display_background(player):
     for index, image in enumerate(player.background_list[::-1], 1):
-        if player.position[0] <= PANNING_SCREEN_WIDTH // 2:
-            x_start = 0
-
-        elif player.position[0] >= SCREEN_WIDTH - PANNING_SCREEN_WIDTH // 2:
-            x_start = SCREEN_WIDTH - PANNING_SCREEN_WIDTH
-
-        else:
-            x_start = player.position[0] - PANNING_SCREEN_WIDTH // 2 +  player.velocity[0]
-        display_rect = pygame.Rect(x_start * index * .1, player.position[1] + 400 - PANNING_SCREEN_HEIGHT // 4, PANNING_SCREEN_WIDTH, PANNING_SCREEN_HEIGHT // 2)
+        x_start = calculate_x_start(player.position[0], SCREEN_WIDTH, PANNING_SCREEN_WIDTH)
+        display_rect = pygame.Rect(x_start * index * 0.1, player.position[1] + PLAYER_OFFSET_Y - PANNING_SCREEN_HEIGHT // 4, PANNING_SCREEN_WIDTH, PANNING_SCREEN_HEIGHT // 2)
         player.play_surface.blit(image, (x_start, player.position[1] - PANNING_SCREEN_HEIGHT // 4), area=display_rect)
 
+def calculate_x_start(player_position, screen_width, panning_screen_width):
+    if player_position <= panning_screen_width // 2:
+        return 0
+    elif player_position + panning_screen_width > screen_width:
+        return screen_width - panning_screen_width
+    else:
+        return player_position - panning_screen_width // 2
+
 def display_tile_set(player, tile_foreground=False, tile_background=False):
-    x_clamp_index = PANNING_SCREEN_WIDTH // (32 * GAME_SCALE)
-    y_clamp_index = PANNING_SCREEN_HEIGHT // (32 * GAME_SCALE)
+    x_clamp_index = PANNING_SCREEN_WIDTH // (TILE_SIZE * GAME_SCALE)
+    y_clamp_index = PANNING_SCREEN_HEIGHT // (TILE_SIZE * GAME_SCALE)
     if not tile_foreground and not tile_background:
         tile_set = player.tile_set
     elif tile_background:
@@ -102,14 +105,7 @@ def event_checker(player_one, player_two, pause_menu):
     return True
 
 def pan_window(player, player_screen):
-    if player.position[0] <= PANNING_SCREEN_WIDTH // 2:
-        x_start = 0
-
-    elif player.position[0] + PANNING_SCREEN_WIDTH > SCREEN_WIDTH:
-        x_start = SCREEN_WIDTH - PANNING_SCREEN_WIDTH
-    else :
-        x_start = player.position[0] - PANNING_SCREEN_WIDTH/2
-
+    x_start = calculate_x_start(player.position[0], SCREEN_WIDTH, PANNING_SCREEN_WIDTH)
     display_rect = pygame.Rect(x_start, player.position[1] - PANNING_SCREEN_HEIGHT // 4, PANNING_SCREEN_WIDTH, PANNING_SCREEN_HEIGHT // 2)
     player_screen.blit(player.play_surface, area=display_rect)
 
@@ -130,7 +126,7 @@ def main():
     player_one, player_one_screen = initialize_player(arrow_controls=False)
     player_two, player_two_screen = initialize_player(arrow_controls=True)
     player_two.current_level = 0
-    player_two.x_spawn, player_two.y_spawn = pygame.math.Vector2(level_files.player_two_spawnpoints[player_two.current_level])  * GAME_SCALE * 32
+    player_two.x_spawn, player_two.y_spawn = pygame.math.Vector2(level_files.player_two_spawnpoints[player_two.current_level])  * GAME_SCALE * TILE_SIZE
     player_two.position[0] = player_two.x_spawn
     player_two.direction = -1
 
@@ -153,18 +149,14 @@ def main():
     level_editor_button = button.Button(screen, screen.width//2, 40, text="Level Editor" )
 
     # ============================   PARTICLE EFFECT TESTING ============================
-    trackers = [tracker.Tracker(random.randint(0, 100), random.randint(0, 100)) for i in range(100)]
-    drift_particles = particle.create_particles()
+    # trackers = [tracker.Tracker(random.randint(0, 100), random.randint(0, 100)) for i in range(100)]
+    # drift_particles = particle.create_particles()
 
     while running:
         # ========================= CHECK FOR GAME INPUT ===============================
         running = event_checker(player_one, player_two, game_pause_menu)
         if not game_pause_menu.is_paused:
-
-            # for _tracker in trackers:
-            #     _tracker.track(player_one.play_surface, player_one)
-
-            render_particles(player_one.play_surface, drift_particles, player_one)
+            #particle.render_particles(player_one.play_surface, drift_particles, player_one)
 
 
             # ============================= PLAYER MOVEMENT ================================
@@ -218,14 +210,11 @@ def main():
             player_two_test_objective.check_objective_collision()
             level_objective.check_level_complete(player_one, player_two)
 
-
             # ============================= FPS CHECK ============================================
-            clock.tick(60)
+            clock.tick()
             fps_text = font.render(f"FPS: {clock.get_fps():.0f}", True, (255, 255, 255))
             fps_text_rect = fps_text.get_rect()
             screen.blit(fps_text, fps_text_rect)
-
-
 
         else:
             screen.fill((255,255,255))
