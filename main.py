@@ -68,31 +68,17 @@ def calculate_x_start(player_position, screen_width, panning_screen_width):
     else:
         return player_position - panning_screen_width // 2
 
-def display_tile_set(player, tile_foreground=False, tile_background=False):
-    x_clamp_index = PANNING_SCREEN_WIDTH // (TILE_SIZE * GAME_SCALE)
-    y_clamp_index = PANNING_SCREEN_HEIGHT // (TILE_SIZE * GAME_SCALE)
-    if not tile_foreground and not tile_background:
-        tile_set = player.tile_set
-    elif tile_background:
-        tile_set = player.tile_background
-    else:
-        tile_set = player.tile_foreground
+def display_tile_set(player, tile_set):
+    x_min = max(player.x_ind - X_WINDOW_PANNING_INDEX, 0)
+    x_max = min(max(player.x_ind + X_WINDOW_PANNING_INDEX + 1, 2 * X_WINDOW_PANNING_INDEX), len(tile_set[0]))
+    y_min = max(player.y_ind - Y_WINDOW_PANNING_INDEX, 0)
+    y_max = min(player.y_ind + Y_WINDOW_PANNING_INDEX + 1, len(tile_set))
 
-    for layer in tile_set[max(player.y_ind-Y_WINDOW_PANNING_INDEX,0):player.y_ind+Y_WINDOW_PANNING_INDEX+1]:
-        if player.position[0] + PANNING_SCREEN_WIDTH // 2 >= SCREEN_WIDTH - PANNING_SCREEN_WIDTH // 2:
-            for tile in layer[x_clamp_index:]:
-                if tile.tile_number != "00":
-                    tile.draw_platform(player.play_surface)
+    for row in tile_set[y_min:y_max]:
+        for tile in row[x_min:x_max]:
+            if tile.tile_number != "00":  # Non-empty tile
+                tile.draw_platform(player.play_surface)
 
-        elif player.position[0] - PANNING_SCREEN_WIDTH // 2 <= 0 :
-            for tile in layer[:x_clamp_index]:
-                if tile.tile_number != "00":
-                    tile.draw_platform(player.play_surface)
-
-        else:
-            for tile in layer[max(player.x_ind - X_WINDOW_PANNING_INDEX, 0):min(player.x_ind + X_WINDOW_PANNING_INDEX,len(layer))]:
-                if tile.tile_number != "00":
-                    tile.draw_platform(player.play_surface)
 
 def event_checker(player_one, player_two, pause_menu):
     events = pygame.event.get()
@@ -158,7 +144,6 @@ def main():
         if not game_pause_menu.is_paused:
             #particle.render_particles(player_one.play_surface, drift_particles, player_one)
 
-
             # ============================= PLAYER MOVEMENT ================================
             player_one.get_player_movement()
             player_two.get_player_movement()
@@ -182,20 +167,21 @@ def main():
             display_background(player_two)
 
             # ======================= DISPLAY BACKGROUND TILE SET ====================
-            display_tile_set(player_one, tile_background=True)
-            display_tile_set(player_two, tile_background=True)
+            display_tile_set(player_one, player_one.tile_background)
+            display_tile_set(player_two, player_two.tile_background)
 
             # ======================= INDIVIDUAL PLAYER DISPLAY ============================
             player_one.display_player(player_one.play_surface)
             player_two.display_player(player_two.play_surface)
 
             # ========================= DISPLAY PLAYER LEVEL TILE SET =======================
-            display_tile_set(player_one)
-            display_tile_set(player_two)
+            display_tile_set(player_one, player_one.tile_set)
+            display_tile_set(player_two, player_two.tile_set)
+
 
             # ========================= DISPLAY FOREGROUND TILE SET =========================
-            display_tile_set(player_one, tile_foreground=True)
-            display_tile_set(player_two, tile_foreground=True)
+            display_tile_set(player_one, player_one.tile_foreground)
+            display_tile_set(player_two, player_two.tile_foreground)
 
             # ====================== DISPLAY LEVEL OBJECTIVES ===============================
             player_one_test_objective.display_objective(player_one.play_surface)
@@ -211,7 +197,7 @@ def main():
             level_objective.check_level_complete(player_one, player_two)
 
             # ============================= FPS CHECK ============================================
-            clock.tick()
+            clock.tick(65)
             fps_text = font.render(f"FPS: {clock.get_fps():.0f}", True, (255, 255, 255))
             fps_text_rect = fps_text.get_rect()
             screen.blit(fps_text, fps_text_rect)
