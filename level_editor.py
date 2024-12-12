@@ -4,6 +4,7 @@ import world_generator
 import level_files
 import copy
 import button
+from config import *
 
 def event_checker(level_editor):
     # =================== HOLDING KEY LOGIC ========================
@@ -36,15 +37,15 @@ def event_checker(level_editor):
             level_editor.current_level += 1
             level_editor.editing_array = [world_generator.WorldGenerator(level_files.player_one_level_set[0][level_editor.current_level]).world_tiles, "Level"]
             level_editor.editing_array[0] += level_editor.blank_array[(len(level_editor.editing_array[0]) - 1):]
-            level_editor.foreground_array = world_generator.WorldGenerator(level_files.player_one_level_set[1][level_editor.current_level]).world_tiles
-            level_editor.background_array = world_generator.WorldGenerator(level_files.player_one_level_set[2][level_editor.current_level]).world_tiles
+            level_editor.foreground = world_generator.WorldGenerator(level_files.player_one_level_set[1][level_editor.current_level]).world_tiles
+            level_editor.background = world_generator.WorldGenerator(level_files.player_one_level_set[2][level_editor.current_level]).world_tiles
             level_editor.level_title_button.set_text(f"Editing: Player {level_editor.selected_player} Level {level_editor.current_level} \n Layer: {level_editor.editing_array[1]}")
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_DOWN and level_editor.current_level > 0:
             level_editor.current_level -= 1
             level_editor.editing_array = [world_generator.WorldGenerator(level_files.player_one_level_set[0][level_editor.current_level]).world_tiles, "Level"]
             level_editor.editing_array[0] += level_editor.blank_array[(len(level_editor.editing_array[0]) - 1):]
-            level_editor.foreground_array = world_generator.WorldGenerator(level_files.player_one_level_set[1][level_editor.current_level]).world_tiles
-            level_editor.background_array = world_generator.WorldGenerator(level_files.player_one_level_set[2][level_editor.current_level]).world_tiles
+            level_editor.foreground = world_generator.WorldGenerator(level_files.player_one_level_set[1][level_editor.current_level]).world_tiles
+            level_editor.background = world_generator.WorldGenerator(level_files.player_one_level_set[2][level_editor.current_level]).world_tiles
             level_editor.level_title_button.set_text(f"Editing: Player {level_editor.selected_player} Level {level_editor.current_level} \n Layer: {level_editor.editing_array[1]}")
     return True
 
@@ -111,7 +112,7 @@ class LevelEditor:
 
         # ==================== CREATE SETTING BUTTONS ===============================
         self.selected_player = "one"
-        self.current_level = 0
+        self.current_level = 1
 
         # Left sided buttons
         self.spawn_button = create_button(0.25, 0.50, "SET SPAWN", self.screen, self.tile_set_image_width)
@@ -132,12 +133,10 @@ class LevelEditor:
         self.player_spawn_selected = False
 
         # ======================== CREATE BACKGROUND, FOREGROUND, AND PLAYER LEVEL =====================================
-        self.background_array = world_generator.WorldGenerator(level_files.player_one_level_set[0][self.current_level]).world_tiles
-        self.player_tile_array = world_generator.WorldGenerator(level_files.player_one_level_set[1][self.current_level]).world_tiles
-        self.foreground_array = world_generator.WorldGenerator(level_files.player_one_level_set[2][self.current_level]).world_tiles
+        self.background, self.player_tile, self.foreground = world_generator.generate_all_world_layers(level_files.player_one_level_set, scale=1, current_level=self.current_level)
 
         # ========================================= NEEDS SORTING =====================================================
-        self.editing_array = [self.player_tile_array, "Player Level Tiles"]
+        self.editing_array = [self.player_tile, "Player Level Tiles"]
         self.level_title_button.set_text(f"Editing: Player {self.selected_player} Level {self.current_level} \n Layer: {self.editing_array[1]}")
 
         self.level_blank = [[f"{self.working_directory}Tile_00.png" for i in range(self.level_x_length)] for j in range(self.level_y_length)]
@@ -173,6 +172,8 @@ class LevelEditor:
 
     def set_player_spawn(self):
         pygame.draw.circle(self.screen, "red", (self.mouse_x, self.mouse_y), 10)
+        if pygame.mouse.get_pressed()[2]:
+            self.player_spawn_selected = False
 
         if pygame.mouse.get_pressed()[0] and self.mouse_x > self.tile_set_image_width:
             level_x_index = (self.mouse_x + self.camera_x_position - self.tile_set_image_width) // self.tile_width
@@ -180,6 +181,7 @@ class LevelEditor:
             print("x index: ", level_x_index)
             print("y index: ", level_y_index)
             self.player_spawn_selected = False
+
 
     def isolate_images(self, x_offset=0, y_offset=0):
         total_rows = self.tile_set_image_height // self.tile_height
@@ -228,7 +230,7 @@ class LevelEditor:
         if self.player_one_button.is_pressed:
             self.selected_player = "one"
             self.level_title_button.display_button()
-            self.editing_array =  [self.player_tile_array, "Player Level Tiles"]
+            self.editing_array =  [self.player_tile, "Player Level Tiles"]
 
             self.level_title_button.set_text(f"Editing: Player {self.selected_player} Level {self.current_level} \n Layer: {self.editing_array[1]}")
 
@@ -236,19 +238,17 @@ class LevelEditor:
         self.player_two_button.check_pressed(self.mouse_x, self.mouse_y)
         if self.player_two_button.is_pressed:
             self.selected_player = "two"
-            self.editing_array =  [self.player_tile_array, "Player Level Tiles"]
+            self.editing_array =  [self.player_tile, "Player Level Tiles"]
             self.level_title_button.set_text(f"Editing: Player {self.selected_player} Level {self.current_level} \n Layer: {self.editing_array[1]}")
 
     def check_save_button(self):
         # Check if mouse is hovering button
         self.save_button.check_pressed(self.mouse_x, self.mouse_y)
         if self.save_button.is_pressed:
-            with open("new_levels_testing.md", "a") as file:
+            with open("new_levels.md", "a") as file:
                 file.write("###")
                 file.write(f"player_{self.selected_player}_{self.editing_array[1].split()[0]}_{self.current_level} = [ \n")
                 for row in self.editing_array[0]:
-                    # for tile_index, tile in enumerate(row):
-                    #     row[tile_index] = tile.replace("./", "")
                     file.write(f'{row},')
                 file.write("] \n")
             self.save_button.is_pressed = False
@@ -261,13 +261,13 @@ class LevelEditor:
     def check_foreground_button(self):
         self.foreground_button.check_pressed(self.mouse_x, self.mouse_y)
         if self.foreground_button.is_pressed:
-            self.editing_array = [self.foreground_array, "Foreground Layer"]
+            self.editing_array = [self.foreground, "Foreground Layer"]
             self.level_title_button.set_text(f"Editing: Player {self.selected_player} Level {self.current_level} \n Layer: {self.editing_array[1]}")
 
     def check_background_button(self):
         self.background_button.check_pressed(self.mouse_x, self.mouse_y)
         if self.background_button.is_pressed:
-            self.editing_array = [self.background_array, "Background Layer"]
+            self.editing_array = [self.background, "Background Layer"]
             self.level_title_button.set_text(f"Editing: Player {self.selected_player} Level {self.current_level} \n Layer: {self.editing_array[1]}")
 
     def pan_camera(self):
@@ -295,10 +295,10 @@ def main(screen_width=1248, screen_height=640):
 
         level_editor.screen.blit(level_editor.grid_screen, (level_editor.tile_set_image_width, 0))
         if level_editor.showing_background:
-            level_editor.display_tile(level_editor.background_array)
-        level_editor.display_tile(level_editor.player_tile_array)
+            level_editor.display_tile(level_editor.background)
+        level_editor.display_tile(level_editor.player_tile)
         if level_editor.showing_foreground:
-            level_editor.display_tile(level_editor.foreground_array)
+            level_editor.display_tile(level_editor.foreground)
         level_editor.pan_camera()
         level_editor.screen.blit(level_editor.tile_set_image)
 
