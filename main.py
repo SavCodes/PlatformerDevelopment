@@ -52,7 +52,7 @@ def display_tile_set(player, tile_set):
             if tile.tile_number != "00":  # Non-empty tile
                 tile.draw_platform(player.play_surface)
 
-def event_checker(player_one, player_two, pause_menu):
+def event_checker(player_one, player_two, pause_menu, npc):
     events = pygame.event.get()
     for event in events:
         if event.type == pygame.QUIT:
@@ -60,6 +60,7 @@ def event_checker(player_one, player_two, pause_menu):
         player_one.player_event_checker(event)
         player_two.player_event_checker(event)
         pause_menu.event_checker(event)
+        npc.event_checker(event)
     return True
 
 def pan_window(player, player_screen):
@@ -108,10 +109,13 @@ def main():
     game_pause_menu = pause_menu.PauseMenu(screen)
     drift_particles = particle.create_particles()
 
+    #= ============================= npppppppppppppppppppppppppppp
+    npc_1 = npc.Npc("./game_assets/player_spritesheets/Idle_4.png", (player_one.x_spawn, player_one.y_spawn))
+
     while running:
 
         # ========================= CHECK FOR GAME INPUT ===============================
-        running = event_checker(player_one, player_two, game_pause_menu)
+        running = event_checker(player_one, player_two, game_pause_menu, npc_1)
         if not game_pause_menu.is_paused:
 
             particle.render_particles(player_one.play_surface, drift_particles, player_one)
@@ -162,6 +166,7 @@ def main():
             player_two_test_objective.display_objective(player_two.play_surface)
 
             # ======================== COMBINED PLAYER DISPLAY =============================
+            npc_1.render_npc(player_one, player_one_screen)
             screen.blit(player_one_screen)
             screen.blit(player_two_screen, (0, screen.get_height() // 2))
 
