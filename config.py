@@ -12,3 +12,6 @@ BACKGROUND_SCROLL_FACTOR = 0.1
 
 DEFAULT_FONT = "C:/Users/Josep/PycharmProjects/PlatformerTrialRun/game_assets/fonts/ByteBounce.ttf"
 DEFAULT_TEXT_COLOR = (30, 30, 30)  # Black
+
+
+DEFAULT_TILE_PATHS = "C:/Users/Josep/PycharmProjects/PlatformerTrialRun/game_assets/tile_sets"
