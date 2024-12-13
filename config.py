@@ -9,4 +9,6 @@ SCREEN_WIDTH = PANNING_SCREEN_WIDTH * 5
 SCREEN_HEIGHT = PANNING_SCREEN_HEIGHT * 3
 PLAYER_OFFSET_Y = 400
 BACKGROUND_SCROLL_FACTOR = 0.1
+
 DEFAULT_FONT = "C:/Users/Josep/PycharmProjects/PlatformerTrialRun/game_assets/fonts/ByteBounce.ttf"
+DEFAULT_TEXT_COLOR = (30, 30, 30)  # Black
