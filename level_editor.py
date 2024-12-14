@@ -177,30 +177,20 @@ class LevelEditor:
             # Select the hovered tile if left-mouse is clicked
             if pygame.mouse.get_just_pressed()[0]:
                 self.selected_tile = x_tile_index + self.tile_set_image_width // TILE_SIZE * y_tile_index + 1
+                self.selected_tile = f'0{self.selected_tile}' if len(str(self.selected_tile)) < 2 else self.selected_tile
 
     def add_to_level(self):
-        # Leave if a tile is not selected
-        if not self.selected_tile:
+        # Leave if a tile is not selected, mouse is hovering the menu, or either mouse button was not pressed
+        if not self.selected_tile or self.mouse_x <= self.tile_set_image_width or not pygame.mouse.get_pressed()[0] and not pygame.mouse.get_pressed()[2]:
             return
+        
+        # Format tile name to be saved into level data, select a blank tile is right mouse is clicked
+        tile_file = f'{self.working_directory}Tile_{self.selected_tile}.png' if not pygame.mouse.get_pressed()[2] else self.working_directory + "Tile_00.png"
 
-        # Leave if mouse is hovering the menu
-        if self.mouse_x <= self.tile_set_image_width:
-            return
-
-        if pygame.mouse.get_pressed()[0]:
-            level_x_index = (self.mouse_x + self.camera_x_position - self.tile_set_image_width) // TILE_SIZE
-            level_y_index = self.mouse_y // TILE_SIZE
-
-            if len(str(self.selected_tile)) < 2:
-                self.selected_tile = f'0{self.selected_tile}'
-            tile_file = f'{self.working_directory}Tile_{self.selected_tile}.png'
-            self.editing_array[0][level_y_index][level_x_index] = game_tile.Platform(tile_file, level_x_index*TILE_SIZE, level_y_index*TILE_SIZE)
-
-        elif pygame.mouse.get_pressed()[2] and self.mouse_x > self.tile_set_image_width:
-            level_x_index = (self.mouse_x + self.camera_x_position - self.tile_set_image_width) // TILE_SIZE
-            level_y_index = self.mouse_y // TILE_SIZE
-            tile_file = self.working_directory + "Tile_00.png"
-            self.editing_array[0][level_y_index][level_x_index] = game_tile.Platform(tile_file, level_x_index*TILE_SIZE, level_y_index*TILE_SIZE)
+        # Add selected tile to the level data array
+        level_x_index = (self.mouse_x + self.camera_x_position - self.tile_set_image_width) // TILE_SIZE
+        level_y_index = self.mouse_y // TILE_SIZE
+        self.editing_array[0][level_y_index][level_x_index] = game_tile.Platform(tile_file, level_x_index*TILE_SIZE, level_y_index*TILE_SIZE)
 
     def set_player_spawn(self):
         pygame.draw.circle(self.screen, "red", (self.mouse_x, self.mouse_y), 10)
