@@ -1,5 +1,8 @@
 import pygame
 import spritesheet
+import level_files
+import world_generator
+from config import *
 
 class Player:
     def __init__(self,scale=1, arrow_controls=True):
@@ -8,45 +11,26 @@ class Player:
         self.animation_speed = 0.2
         self.scale = scale
         self.controls =  [pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN] if arrow_controls else [pygame.K_a, pygame.K_d, pygame.K_w, pygame.K_s]
-        self.character_image_directory = "./game_assets/player_spritesheets/"
 
         # Level tracking requirements
-        self.current_level = 0
+        self.current_level = 1
         self.level_completed = False
 
         # Idle animation requirements
-        self.idle_sprites = spritesheet.SpriteSheet(self.character_image_directory + "Idle_4.png", scale=self.scale)
         self.is_attacking = False
 
         # Death animation requirements
-        self.death_sprites = spritesheet.SpriteSheet(self.character_image_directory+ "Death_8.png", scale=self.scale)
         self.max_health = 100
         self.current_health = self.max_health
 
-        # Walking animation requirements
-        self.walk_sprites = spritesheet.SpriteSheet(self.character_image_directory + "Walk_6.png", scale=self.scale)
-
         # Running animation requirements
-        self.run_sprites = spritesheet.SpriteSheet(self.character_image_directory + "Run_6.png", scale=self.scale)
         self.sprint_speed = 3
 
-        # Walk to Run dust animation requirements
-        self.run_dust_sprites = spritesheet.SpriteSheet(self.character_image_directory + "Run_Dust_6.png", scale=self.scale)
-        self.run_dust_index = 0
-
         # Jump animation requirements
-        self.jump_sprites = spritesheet.SpriteSheet(self.character_image_directory + "Jump_8.png", scale=self.scale)
-        self.jump_index = 0
         self.max_jumps = 2
         self.jump_count = 0
+        self.jump_index = 0
         self.is_touching_ground = False
-
-        # Double jump animation requirements
-        self.double_jump_sprites = spritesheet.SpriteSheet(self.character_image_directory + "Double_Jump_Dust_5.png", scale=self.scale)
-        self.double_jump_index = 0
-
-        # Attack animation requirements
-        self.attack_sprites = spritesheet.SpriteSheet(self.character_image_directory + "Attack1_4.png", scale=self.scale)
 
         # Initialize player dimensions
         self.player_height = 32 * self.scale
@@ -54,8 +38,8 @@ class Player:
         self.player_width_buffer = self.player_width // 4
 
         # Initialize player position
-        self.x_spawn = self.scale * 32 * 4
-        self.y_spawn = 0
+        self.x_spawn = level_files.player_one_spawnpoints[self.current_level][0] * self.scale * 32
+        self.y_spawn = level_files.player_one_spawnpoints[self.current_level][1] * self.scale * 32
         self.position = pygame.math.Vector2(self.x_spawn, self.y_spawn)
         self.player_rect = pygame.Rect(self.position[0], self.position[1], self.player_width, self.player_height)
 
@@ -72,6 +56,23 @@ class Player:
         self.collision_direction = None
         self.collision = False
         self.arrow_controls = arrow_controls
+
+        self.load_sprite_sheets()
+        self.load_tile_sets()
+
+    def load_sprite_sheets(self):
+        self.idle_sprites = spritesheet.SpriteSheet(DEFAULT_PLAYER_SPRITESHEET_PATH + "Idle_4.png", scale=self.scale)
+        self.death_sprites = spritesheet.SpriteSheet(DEFAULT_PLAYER_SPRITESHEET_PATH + "Death_8.png", scale=self.scale)
+        self.run_sprites = spritesheet.SpriteSheet(DEFAULT_PLAYER_SPRITESHEET_PATH + "Run_6.png", scale=self.scale)
+        self.run_dust_sprites = spritesheet.SpriteSheet(DEFAULT_PLAYER_SPRITESHEET_PATH + "Run_Dust_6.png", scale=self.scale)
+        self.idle_sprites = spritesheet.SpriteSheet(DEFAULT_PLAYER_SPRITESHEET_PATH + "Idle_4.png", scale=self.scale)
+        self.walk_sprites = spritesheet.SpriteSheet(DEFAULT_PLAYER_SPRITESHEET_PATH + "Walk_6.png", scale=self.scale)
+        self.attack_sprites = spritesheet.SpriteSheet(DEFAULT_PLAYER_SPRITESHEET_PATH + "Attack1_4.png", scale=self.scale)
+        self.double_jump_sprites = spritesheet.SpriteSheet(DEFAULT_PLAYER_SPRITESHEET_PATH + "Double_Jump_Dust_5.png", scale=self.scale)
+        self.jump_sprites = spritesheet.SpriteSheet(DEFAULT_PLAYER_SPRITESHEET_PATH + "Jump_8.png", scale=self.scale)
+
+    def load_tile_sets(self):
+        self.tile_background, self.tile_set, self.tile_foreground = world_generator.generate_all_world_layers(level_files.player_one_level_set, scale=GAME_SCALE, current_level=self.current_level)
 
     def respawn_player(self):
         if self.death_sprites.animation_index >= self.death_sprites.number_of_animations - 1:
@@ -179,7 +180,6 @@ class Player:
         if y_ind + 1 < len(wall_rects) - 1 and not wall_rects[y_ind+1][x_ind].is_collidable:
             self.is_touching_ground = False
 
-
         for wall in neighboring_walls:
             pygame.draw.rect(screen, "white", wall.platform_rect, 2)
 
@@ -257,7 +257,6 @@ class Player:
         elif keys[self.controls[1]] and self.velocity[0] >= 0:
             self.acceleration[0] = self.x_move_speed
             self.velocity[0] = min(self.velocity[0], self.x_speed_cap)
-
         else:
             self.slide_on_stop()
             self.run_dust_index = 0
@@ -272,7 +271,7 @@ class Player:
             self.acceleration[0] = 0.2
 
     def player_event_checker(self, game_event):
-        if game_event.type == pygame.KEYDOWN and game_event.key == pygame.K_SPACE and self.velocity[0] != 0:
+        if game_event.type == pygame.KEYDOWN and game_event.key == pygame.K_SPACE and self.velocity.magnitude() != 0:
             self.velocity[0] += 20 * self.direction
 
         if game_event.type == pygame.KEYDOWN and game_event.key == self.controls[2]:
