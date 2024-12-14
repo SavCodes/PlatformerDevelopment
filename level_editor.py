@@ -5,14 +5,12 @@ import level_files
 import copy
 import button
 from config import *
-import spritesheet
-import random
 from main import load_sprite_sheets
 
 def event_checker(level_editor):
     # =================== HOLDING KEY LOGIC ========================
     keys = pygame.key.get_pressed()
-    if keys[pygame.K_RIGHT] and level_editor.camera_x_position < level_editor.TOTAL_LEVEL_WIDTH:
+    if keys[pygame.K_RIGHT] and level_editor.camera_x_position < SCREEN_WIDTH:
         level_editor.camera_x_position += 16
     elif keys[pygame.K_LEFT] and level_editor.camera_x_position > 0:
         level_editor.camera_x_position -= 16
@@ -72,7 +70,7 @@ def toggle_tilesets(editor, tile_set_number):
     editor.tile_set_image_width, editor.tile_set_image_height = editor.tile_set_image.get_width(), editor.tile_set_image.get_height()
 
 class LevelEditor:
-    def __init__(self, screen_width=1248, screen_height=PANNING_SCREEN_HEIGHT):
+    def __init__(self):
         # ======================== needs to be sorted ============================
         pygame.init()
         pygame.display.set_caption('Level Editor')
@@ -96,8 +94,8 @@ class LevelEditor:
         self.tile_set_image = pygame.transform.scale(self.tile_set_image,(32*self.starting_cols, 32*self.starting_rows))
 
         # ======================= SCREEN DATA =================================
-        self.screen_width = screen_width
-        self.screen_height = screen_height
+        self.screen_width = PANNING_SCREEN_WIDTH
+        self.screen_height = PANNING_SCREEN_HEIGHT
         self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
 
         # ======================= TILE DATA ===================================
@@ -168,15 +166,28 @@ class LevelEditor:
         return tile_manager
 
     def select_tile(self):
+        # Get mouse coordinates
         self.mouse_x , self.mouse_y = pygame.mouse.get_pos()
+
+        # Check if mouse is in a location where a tile can be selected
         if self.mouse_x <= self.tile_set_image_width and self.mouse_y <= self.tile_set_image_height:
             x_tile_index = self.mouse_x // TILE_SIZE
             y_tile_index = self.mouse_y // TILE_SIZE
+
+            # Select the hovered tile if left-mouse is clicked
             if pygame.mouse.get_just_pressed()[0]:
                 self.selected_tile = x_tile_index + self.tile_set_image_width // TILE_SIZE * y_tile_index + 1
 
     def add_to_level(self):
-        if self.selected_tile and pygame.mouse.get_pressed()[0] and self.mouse_x > self.tile_set_image_width:
+        # Leave if a tile is not selected
+        if not self.selected_tile:
+            return
+
+        # Leave if mouse is hovering the menu
+        if self.mouse_x <= self.tile_set_image_width:
+            return
+
+        if pygame.mouse.get_pressed()[0]:
             level_x_index = (self.mouse_x + self.camera_x_position - self.tile_set_image_width) // TILE_SIZE
             level_y_index = self.mouse_y // TILE_SIZE
 
@@ -295,13 +306,11 @@ class LevelEditor:
             self.level_title_button.set_text(f"Editing: Player {self.selected_player} Level {self.current_level} \n Layer: {self.editing_array[1]}")
 
     def pan_camera(self):
-        PANNING_SCREEN_WIDTH = 960
-        PANNING_SCREEN_HEIGHT = 576
         panning_display_rect = pygame.Rect(self.camera_x_position,0, PANNING_SCREEN_WIDTH,PANNING_SCREEN_HEIGHT)
         self.screen.blit(self.grid_screen, (self.tile_set_image_width,0), area=panning_display_rect)
 
 def main():
-    level_editor = LevelEditor(1248, PANNING_SCREEN_HEIGHT)
+    level_editor = LevelEditor()
     #level_editor.isolate_images(0, 0)
     clock = pygame.Clock()
     frame_rate = 300
