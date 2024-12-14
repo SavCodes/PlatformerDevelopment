@@ -237,9 +237,7 @@ class Player:
         self.position[1] += self.velocity[1]
         self.velocity[0] += self.acceleration[0]
         self.velocity[1] += self.acceleration[1]
-
         self.velocity[1] = min(self.velocity[1], 10)
-        self.resolve_collision(walls, screen)
 
     def get_player_movement(self):
         if self.velocity[0] > 0:
