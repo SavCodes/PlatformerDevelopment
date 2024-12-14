@@ -5,6 +5,9 @@ import level_files
 import copy
 import button
 from config import *
+import spritesheet
+import random
+from main import load_sprite_sheets
 
 def event_checker(level_editor):
     # =================== HOLDING KEY LOGIC ========================
@@ -69,7 +72,7 @@ def toggle_tilesets(editor, tile_set_number):
     editor.tile_set_image_width, editor.tile_set_image_height = editor.tile_set_image.get_width(), editor.tile_set_image.get_height()
 
 class LevelEditor:
-    def __init__(self, screen_width=1248, screen_height=640):
+    def __init__(self, screen_width=1248, screen_height=PANNING_SCREEN_HEIGHT):
         # ======================== needs to be sorted ============================
         pygame.init()
         pygame.display.set_caption('Level Editor')
@@ -80,8 +83,6 @@ class LevelEditor:
         # ======================== CAMERA PANNING ATTRIBUTES ===================
         self.camera_y_position = 0
         self.camera_x_position = 0
-        self.TOTAL_LEVEL_WIDTH = 960 * 5
-        self.TOTAL_LEVEL_HEIGHT = 576 * 3
 
         # ======================== FILE PATH ==================================
         self.current_tileset = 1
@@ -102,13 +103,12 @@ class LevelEditor:
         # ======================= TILE DATA ===================================
         self.tile_set_image_width = self.tile_set_image.get_width()
         self.tile_set_image_height = self.tile_set_image.get_height()
-        self.tile_width, self.tile_height = 32, 32
         self.selected_tile = None
 
         # ====================== LEVEL DATA ===================================
-        self.grid_screen = pygame.Surface((self.TOTAL_LEVEL_WIDTH, self.TOTAL_LEVEL_HEIGHT))
-        self.level_x_length = (self.TOTAL_LEVEL_WIDTH - self.tile_set_image_width) // 32
-        self.level_y_length = self.TOTAL_LEVEL_HEIGHT // 32
+        self.grid_screen = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+        self.level_x_length = (SCREEN_WIDTH - self.tile_set_image_width) // TILE_SIZE
+        self.level_y_length = SCREEN_HEIGHT // TILE_SIZE
 
         # ==================== CREATE SETTING BUTTONS ===============================
         self.selected_player = "one"
@@ -128,6 +128,18 @@ class LevelEditor:
 
         # Centered buttons
         self.level_title_button = create_button(0.45, 0.95, f"Editing: Player {self.selected_player} Level {self.current_level}", self.screen, self.tile_set_image_width)
+
+        self.button_list = [
+            self.spawn_button,
+            self.player_one_button,
+            self.player_two_button,
+            self.save_button,
+            self.background_button,
+            self.objective_button,
+            self.reset_button,
+            self.foreground_button,
+        ]
+
         # ==================== PLAYER SPAWN LOGIC ==================================
         self.player_spawn_set = False
         self.player_spawn_selected = False
@@ -144,31 +156,40 @@ class LevelEditor:
 
         self.editing_array[0] += self.blank_array[(len(self.editing_array[0]) - 1):]
         self.original_level = copy.deepcopy(self.editing_array[0])
+        self.tile_manager = self.load_and_scale_animated_tiles()
 
     # ========================== EDITING LOGIC METHODS ======================================
+    def load_and_scale_animated_tiles(self):
+        tile_manager = load_sprite_sheets()
+        for tile in tile_manager.animated_background_tiles:
+            tile["location"] = (tile["location"][0] / 2, tile["location"][1] / 2)
+        for tile in tile_manager.animated_foreground_tiles:
+            tile["location"] = (tile["location"][0] / 2, tile["location"][1] / 2)
+        return tile_manager
+
     def select_tile(self):
         self.mouse_x , self.mouse_y = pygame.mouse.get_pos()
         if self.mouse_x <= self.tile_set_image_width and self.mouse_y <= self.tile_set_image_height:
-            x_tile_index = self.mouse_x // self.tile_width
-            y_tile_index = self.mouse_y // self.tile_height
+            x_tile_index = self.mouse_x // TILE_SIZE
+            y_tile_index = self.mouse_y // TILE_SIZE
             if pygame.mouse.get_just_pressed()[0]:
-                self.selected_tile = x_tile_index + self.tile_set_image_width // self.tile_width * y_tile_index + 1
+                self.selected_tile = x_tile_index + self.tile_set_image_width // TILE_SIZE * y_tile_index + 1
 
     def add_to_level(self):
         if self.selected_tile and pygame.mouse.get_pressed()[0] and self.mouse_x > self.tile_set_image_width:
-            level_x_index = (self.mouse_x + self.camera_x_position - self.tile_set_image_width) // self.tile_width
-            level_y_index = self.mouse_y // self.tile_height
+            level_x_index = (self.mouse_x + self.camera_x_position - self.tile_set_image_width) // TILE_SIZE
+            level_y_index = self.mouse_y // TILE_SIZE
 
             if len(str(self.selected_tile)) < 2:
                 self.selected_tile = f'0{self.selected_tile}'
             tile_file = f'{self.working_directory}Tile_{self.selected_tile}.png'
-            self.editing_array[0][level_y_index][level_x_index] = game_tile.Platform(tile_file, level_x_index*self.tile_width, level_y_index*self.tile_height)
+            self.editing_array[0][level_y_index][level_x_index] = game_tile.Platform(tile_file, level_x_index*TILE_SIZE, level_y_index*TILE_SIZE)
 
         elif pygame.mouse.get_pressed()[2] and self.mouse_x > self.tile_set_image_width:
-            level_x_index = (self.mouse_x + self.camera_x_position - self.tile_set_image_width) // self.tile_width
-            level_y_index = self.mouse_y // self.tile_height
+            level_x_index = (self.mouse_x + self.camera_x_position - self.tile_set_image_width) // TILE_SIZE
+            level_y_index = self.mouse_y // TILE_SIZE
             tile_file = self.working_directory + "Tile_00.png"
-            self.editing_array[0][level_y_index][level_x_index] = game_tile.Platform(tile_file, level_x_index*self.tile_width, level_y_index*self.tile_height)
+            self.editing_array[0][level_y_index][level_x_index] = game_tile.Platform(tile_file, level_x_index*TILE_SIZE, level_y_index*TILE_SIZE)
 
     def set_player_spawn(self):
         pygame.draw.circle(self.screen, "red", (self.mouse_x, self.mouse_y), 10)
@@ -176,20 +197,19 @@ class LevelEditor:
             self.player_spawn_selected = False
 
         if pygame.mouse.get_pressed()[0] and self.mouse_x > self.tile_set_image_width:
-            level_x_index = (self.mouse_x + self.camera_x_position - self.tile_set_image_width) // self.tile_width
-            level_y_index = self.mouse_y // self.tile_height
+            level_x_index = (self.mouse_x + self.camera_x_position - self.tile_set_image_width) // TILE_SIZE
+            level_y_index = self.mouse_y // TILE_SIZE
             print("x index: ", level_x_index)
             print("y index: ", level_y_index)
             self.player_spawn_selected = False
 
-
-    def isolate_images(self, x_offset=0, y_offset=0):
-        total_rows = self.tile_set_image_height // self.tile_height
-        total_columns = self.tile_set_image_width // self.tile_width
+    def isolate_images(self, x_offset=0, y_offset=0, image_width=32, image_height=32):
+        total_rows = self.tile_set_image_height // TILE_SIZE
+        total_columns = self.tile_set_image_width // TILE_SIZE
 
         for j in range(total_rows):
             for i in range(total_columns):
-                images = self.tile_set_image.subsurface(i*32+x_offset, min(j*32+y_offset, (total_rows-1)*32), 32 ,32)
+                images = self.tile_set_image.subsurface(i*image_width+x_offset, min(j*image_height+y_offset, (total_rows-1)*image_height), image_width, image_height)
                 tile_number = i + j * total_columns + 1
                 if len(str(tile_number)) < 2:
                     tile_number = f'0{tile_number}'
@@ -209,14 +229,18 @@ class LevelEditor:
                     color = (50,50,50)
 
                 pygame.draw.rect(self.grid_screen, color,
-                                 (i * self.tile_width, j * self.tile_height, self.tile_width, self.tile_height))
+                                 (i * TILE_SIZE, j * TILE_SIZE, TILE_SIZE, TILE_SIZE))
 
     def display_tile(self, array_to_display):
-        start_index = self.camera_x_position // self.tile_width
-        end_index = (self.screen_width - self.tile_set_image_width) // self.tile_width + start_index
+        start_index = self.camera_x_position // TILE_SIZE
+        end_index = (self.screen_width - self.tile_set_image_width) // TILE_SIZE + start_index
         for layer in array_to_display:
             for tile in layer[start_index:end_index]:
                 tile.draw_platform(self.grid_screen)
+
+    def display_buttons(self):
+        for menu_button in self.button_list:
+            menu_button.display_button()
 
     # ============================ BUTTON METHODS ===========================================
     def check_spawn_button(self):
@@ -276,12 +300,13 @@ class LevelEditor:
         panning_display_rect = pygame.Rect(self.camera_x_position,0, PANNING_SCREEN_WIDTH,PANNING_SCREEN_HEIGHT)
         self.screen.blit(self.grid_screen, (self.tile_set_image_width,0), area=panning_display_rect)
 
-def main(screen_width=1248, screen_height=640):
-    level_editor = LevelEditor(screen_width, screen_height)
+def main():
+    level_editor = LevelEditor(1248, PANNING_SCREEN_HEIGHT)
     #level_editor.isolate_images(0, 0)
     clock = pygame.Clock()
     frame_rate = 300
     running = True
+
     while running:
         # ================================== LOGIC RELATED CODE ====================================
         running = event_checker(level_editor)
@@ -292,26 +317,27 @@ def main(screen_width=1248, screen_height=640):
         level_editor.grid_screen.fill((0,0,0))
         level_editor.screen.fill((0, 0, 0))
         level_editor.display_gridlines()
-
         level_editor.screen.blit(level_editor.grid_screen, (level_editor.tile_set_image_width, 0))
+        level_editor.tile_manager.draw_tiles(level_editor.grid_screen, level_editor.tile_manager.animated_background_tiles)
+
+        # BACKGROUND DISPLAY TOGGLE
         if level_editor.showing_background:
             level_editor.display_tile(level_editor.background)
+            level_editor.tile_manager.draw_tiles(level_editor.grid_screen, level_editor.tile_manager.animated_background_tiles)
+
+        # PLAYER LEVEL DISPLAY
         level_editor.display_tile(level_editor.player_tile)
+
+        # FOREGROUND DISPLAY TOGGLE
         if level_editor.showing_foreground:
             level_editor.display_tile(level_editor.foreground)
+            level_editor.tile_manager.draw_tiles(level_editor.grid_screen, level_editor.tile_manager.animated_foreground_tiles)
+
         level_editor.pan_camera()
         level_editor.screen.blit(level_editor.tile_set_image)
 
         # ================================= BUTTON DISPLAY CODE ===================================
-        level_editor.player_one_button.display_button()
-        level_editor.player_two_button.display_button()
-        level_editor.save_button.display_button()
-        level_editor.reset_button.display_button()
-        level_editor.spawn_button.display_button()
-        level_editor.objective_button.display_button()
-        level_editor.foreground_button.display_button()
-        level_editor.background_button.display_button()
-        level_editor.level_title_button.display_button((0,0,0))
+        level_editor.display_buttons()
 
         # ================================ BUTTON LOGIC CODE =====================================
         level_editor.check_save_button()
@@ -321,21 +347,11 @@ def main(screen_width=1248, screen_height=640):
         level_editor.check_foreground_button()
         level_editor.check_background_button()
 
-
-
         if level_editor.player_spawn_selected:
             level_editor.set_player_spawn()
 
-
-        # ============================ FPS RELATED LOGIC =============================
-        # fps_text = level_editor.save_button.font.render(f"FPS: {clock.get_fps():.0f}", True, (255, 255, 255))
-        # fps_text_rect = fps_text.get_rect()
-        # level_editor.screen.blit(fps_text, fps_text_rect)
         clock.tick(frame_rate)
         pygame.display.update()
-
-
-    #pygame.quit()
 
 if __name__ == '__main__':
     main()
