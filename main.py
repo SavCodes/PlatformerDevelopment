@@ -1,12 +1,8 @@
 import pygame
-import particle
-import random
 import pause_menu
+import particle, physics, random
 import level_objective, level_files
-import player
-import physics
-import spritesheet
-import npc
+import player, npc, spritesheet
 from config import *
 
 def initialize_pygame():
@@ -37,14 +33,14 @@ def display_background(player):
 def calculate_x_start(player_position):
     if player_position <= PANNING_SCREEN_WIDTH // 2:
         return 0
-    elif player_position + PANNING_SCREEN_WIDTH > SCREEN_WIDTH:
+    elif player_position + PANNING_SCREEN_WIDTH // 2 > SCREEN_WIDTH:
         return SCREEN_WIDTH - PANNING_SCREEN_WIDTH
     else:
         return player_position - PANNING_SCREEN_WIDTH // 2
 
 def display_tile_set(player, tile_set):
-    x_min = max(min(player.x_ind - X_WINDOW_PANNING_INDEX, 2 * X_WINDOW_PANNING_INDEX), 0)
-    x_max = min(player.x_ind + X_WINDOW_PANNING_INDEX + 1, len(tile_set[0]))
+    x_min = max(min(player.x_ind - X_WINDOW_PANNING_INDEX, PANNING_SCREEN_WIDTH//(2*TILE_SIZE)), 0)
+    x_max = min(max(player.x_ind + X_WINDOW_PANNING_INDEX,PANNING_SCREEN_WIDTH//(2*TILE_SIZE)) + 1, len(tile_set[0]))
     y_min = max(player.y_ind - Y_WINDOW_PANNING_INDEX, 0)
     y_max = min(player.y_ind + Y_WINDOW_PANNING_INDEX + 1, len(tile_set))
     for row in tile_set[y_min:y_max]:
@@ -65,29 +61,32 @@ def event_checker(player_one, player_two, pause_menu, npc):
 
 def pan_window(player, player_screen):
     x_start = calculate_x_start(player.position[0])
+    player.x_start = x_start
     display_rect = pygame.Rect(x_start, player.position[1] - PANNING_SCREEN_HEIGHT // 4, PANNING_SCREEN_WIDTH, PANNING_SCREEN_HEIGHT // 2)
     player_screen.blit(player.play_surface, area=display_rect)
+
+def load_sprite_sheets():
+    grass_sway_sheet = spritesheet.SpriteSheet("./game_assets/animated_tiles/grass_spritesheet_41.png", scale=GAME_SCALE, width=32, height=64)
+    flower_sway_sheet = spritesheet.SpriteSheet("./game_assets/animated_tiles/flower_spritesheet_42.png", scale=GAME_SCALE, width=64, height=64)
+    bush_sway_sheet = spritesheet.SpriteSheet("./game_assets/animated_tiles/bush_spritesheet_41.png", scale=GAME_SCALE, width=64, height=64)
+    bush_2_sway_sheet = spritesheet.SpriteSheet("./game_assets/animated_tiles/bush_2_spritesheet_41.png", scale=GAME_SCALE, width=64, height=64)
+    tile_manager = spritesheet.AnimatedTileManager()
+    for i in range(10):
+        tile_manager.add_tile(flower_sway_sheet, (150 + random.randint(30,40)*i,random.randint(14*64,15*64)), tile_manager.animated_background_tiles, animation_speed=0)
+        tile_manager.add_tile(grass_sway_sheet, (150 + random.randint(30,40)*i,13.5*64), tile_manager.animated_foreground_tiles)  # Add at position (200, 150)
+        tile_manager.add_tile(bush_sway_sheet, (400 + random.randint(30,40)*i,random.randint(14*64,15*64)), tile_manager.animated_background_tiles)
+        tile_manager.add_tile(bush_2_sway_sheet, (800 + random.randint(30,40)*i,random.randint(14*64,15*64)), tile_manager.animated_foreground_tiles)
+    return tile_manager
 
 def main():
     running = True
     screen = pygame.display.set_mode((PANNING_SCREEN_WIDTH, PANNING_SCREEN_HEIGHT))
     screen.set_alpha(None)
     clock = pygame.time.Clock()
-    font = pygame.font.SysFont("comicsans", 30)
+    font = pygame.font.Font(DEFAULT_FONT, 30)
 
     # ===================================== ANIMATED TILE MANAGEMENT ================================================
-    # Initialize the AnimatedTileManager
-    grass_sway_sheet = spritesheet.SpriteSheet("./game_assets/animated_tiles/grass_spritesheet_41.png", scale=2.0, width=32, height=64)
-    flower_sway_sheet = spritesheet.SpriteSheet("./game_assets/animated_tiles/flower_spritesheet_42.png", scale=2.0, width=64, height=64)
-    bush_sway_sheet = spritesheet.SpriteSheet("./game_assets/animated_tiles/bush_spritesheet_41.png", scale=2.0, width=64, height=64)
-    bush_2_sway_sheet = spritesheet.SpriteSheet("./game_assets/animated_tiles/bush_2_spritesheet_41.png", scale=2.0, width=64, height=64)
-    tile_manager = spritesheet.AnimatedTileManager()
-
-    for i in range(10):
-        tile_manager.add_tile(flower_sway_sheet, (150 + random.randint(30,40)*i,random.randint(14*64,15*64)), tile_manager.animated_background_tiles, animation_speed=0)
-        tile_manager.add_tile(grass_sway_sheet, (150 + random.randint(30,40)*i,13.5*64), tile_manager.animated_foreground_tiles)  # Add at position (200, 150)
-        tile_manager.add_tile(bush_sway_sheet, (400 + random.randint(30,40)*i,random.randint(14*64,15*64)), tile_manager.animated_background_tiles)
-        tile_manager.add_tile(bush_2_sway_sheet, (800 + random.randint(30,40)*i,random.randint(14*64,15*64)), tile_manager.animated_foreground_tiles)
+    animated_tile_manager = load_sprite_sheets()
 
     #======================================= PLAYER INITIALIZATION ================================================
     player_one, player_one_screen = initialize_player(arrow_controls=False)
@@ -107,10 +106,12 @@ def main():
 
     # ============================   PAUSE MENU TESTING =================================
     game_pause_menu = pause_menu.PauseMenu(screen)
+
+    # ========================== PARTICLE EFFECT INSTANTIATION ==========================
     drift_particles = particle.create_particles()
 
-    #= ============================= npppppppppppppppppppppppppppp
-    npc_1 = npc.Npc("./game_assets/player_spritesheets/Idle_4.png", (player_one.x_spawn, player_one.y_spawn))
+    #= ============================= NPC TESTING LOGIC ==================================
+    npc_1 = npc.Npc( "Idle_4.png", (36*TILE_SIZE*GAME_SCALE, 7*TILE_SIZE*GAME_SCALE))
 
     while running:
 
@@ -118,6 +119,7 @@ def main():
         running = event_checker(player_one, player_two, game_pause_menu, npc_1)
         if not game_pause_menu.is_paused:
 
+            # ============================= RENDER PARTICLE EFFECTS ========================
             particle.render_particles(player_one.play_surface, drift_particles, player_one)
 
             # ============================= PLAYER MOVEMENT ================================
@@ -141,7 +143,7 @@ def main():
             # ========================= DISPLAY BACKGROUND ==================================
             display_background(player_one)
             display_background(player_two)
-            tile_manager.draw_tiles(player_one.play_surface, tile_manager.animated_background_tiles, dampener_speed=0.2)
+            animated_tile_manager.draw_tiles(player_one.play_surface, animated_tile_manager.animated_background_tiles, dampener_speed=0.2)
 
             # ======================= DISPLAY BACKGROUND TILE SET ====================
             display_tile_set(player_one, player_one.tile_background)
@@ -158,8 +160,7 @@ def main():
             # ========================= DISPLAY FOREGROUND TILE SET =========================
             display_tile_set(player_one, player_one.tile_foreground)
             display_tile_set(player_two, player_two.tile_foreground)
-            tile_manager.draw_tiles(player_one.play_surface, tile_manager.animated_foreground_tiles, dampener_speed=0.05)
-
+            animated_tile_manager.draw_tiles(player_one.play_surface, animated_tile_manager.animated_foreground_tiles, dampener_speed=0.05)
 
             # ====================== DISPLAY LEVEL OBJECTIVES ===============================
             player_one_test_objective.display_objective(player_one.play_surface)
@@ -191,4 +192,3 @@ def main():
 if __name__ == '__main__':
     initialize_pygame()
     main()
-
