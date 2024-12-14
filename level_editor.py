@@ -87,7 +87,7 @@ class LevelEditor:
         self.current_tileset = 1
         self.starting_rows = 7
         self.starting_cols = 7
-        self.tile_set_directories = ["./game_assets/tile_files/", "./game_assets/mossy_test/", "./game_assets/hazard_tiles/"]
+        self.tile_set_directories = [f"{DEFAULT_TILE_PATHS}tile_files/", f"{DEFAULT_TILE_PATHS}mossy_test/", f"{DEFAULT_TILE_PATHS}hazard_tiles/"]
         self.working_directory = self.tile_set_directories[self.current_tileset]              # CHANGE ME FOR DIFFERENT SETS
         self.tile_set_name = 'Tileset.png'                                                    # CHANGE ME FOR DIFFERENT SETS
         self.full_file_path = self.tile_set_directories[self.current_tileset] + self.tile_set_name
