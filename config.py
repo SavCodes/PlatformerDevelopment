@@ -14,4 +14,8 @@ DEFAULT_FONT = "C:/Users/Josep/PycharmProjects/PlatformerTrialRun/game_assets/fo
 DEFAULT_TEXT_COLOR = (30, 30, 30)  # Black
 
 
+# ========================= GAME ASSET LOCATIONS ============================================
 DEFAULT_TILE_PATHS = "C:/Users/Josep/PycharmProjects/PlatformerTrialRun/game_assets/tile_sets"
+DEFAULT_BACKGROUND_IMAGE_PATH = "C:/Users/Josep/PycharmProjects/PlatformerTrialRun/game_assets/background_images"
+DEFAULT_NPC_SPRITESHEET_PATH = "C:/Users/Josep/PycharmProjects/PlatformerTrialRun/game_assets/spritesheets/npc_spritesheets/"
+DEFAULT_PLAYER_SPRITESHEET_PATH = "C:/Users/Josep/PycharmProjects/PlatformerTrialRun/game_assets/spritesheets/player_spritesheets/"
